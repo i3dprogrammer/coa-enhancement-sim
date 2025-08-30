@@ -1,4 +1,3 @@
-\
 import React, { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Info } from "lucide-react";
@@ -33,7 +32,7 @@ function suggestedStarsForLevel(L) {
 
 // Seeded RNG (LCG)
 function createLCG(seed) {
-  let state = (seed >>> 0) || 1;
+  let state = seed >>> 0 || 1;
   return function rand() {
     state = (1664525 * state + 1013904223) >>> 0; // Numerical Recipes
     return state / 0xffffffff;
@@ -240,9 +239,7 @@ function InfoIcon({ text }) {
         <Info size={14} />
       </button>
       {open && (
-        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-6 w-56 rounded-lg bg-black/90 text-white text-xs p-2 shadow-lg">
-          {text}
-        </span>
+        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-6 w-56 rounded-lg bg-black/90 text-white text-xs p-2 shadow-lg">{text}</span>
       )}
     </span>
   );
@@ -357,8 +354,12 @@ export default function App() {
     const fullAttempts = [];
     const fullGolds = [];
 
-    const starsAttemptsPerStar = Array(numStars).fill(0).map(() => []);
-    const fullAttemptsPerStar = Array(numStars).fill(0).map(() => []);
+    const starsAttemptsPerStar = Array(numStars)
+      .fill(0)
+      .map(() => []);
+    const fullAttemptsPerStar = Array(numStars)
+      .fill(0)
+      .map(() => []);
 
     for (let t = 0; t < Number(trials); t++) {
       const s = simulateStarsOnly(params, rng);
@@ -532,7 +533,9 @@ export default function App() {
                   onChange={(e) => setFromLevel(Number(e.target.value))}
                   className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
                 />
-                <div className="text-xs text-gray-500 mt-1">Simulates +{fromLevel} → +{toLevel}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Simulates +{fromLevel} → +{toLevel}
+                </div>
               </div>
               <div className="flex flex-col">
                 <label className="text-xs text-gray-600">Stars required</label>
@@ -550,7 +553,9 @@ export default function App() {
                 />
                 <div className="text-xs text-gray-500 mt-1">
                   Suggested: {suggestedStarsForLevel(Number(fromLevel))}{" "}
-                  <button onClick={applySuggestedStars} className="underline hover:no-underline">apply</button>
+                  <button onClick={applySuggestedStars} className="underline hover:no-underline">
+                    apply
+                  </button>
                 </div>
               </div>
             </div>
@@ -578,7 +583,9 @@ export default function App() {
                 </div>
               ))}
               <div className="flex flex-col md:col-span-2">
-                <label className="text-xs text-gray-600">Final upgrade rate (+{fromLevel} → +{toLevel})</label>
+                <label className="text-xs text-gray-600">
+                  Final upgrade rate (+{fromLevel} → +{toLevel})
+                </label>
                 <input
                   type="number"
                   step="0.001"
@@ -707,10 +714,22 @@ export default function App() {
                 title={`Build ${results.params.numStars} Stars — Monte Carlo`}
                 titleInfo="Averages and percentiles from simulation."
                 rows={[
-                  { Metric: "Mean Attempts", Value: { value: formatNumber(Math.round(results.starsSummary.meanAttempts)), info: "Arithmetic average across runs." } },
-                  { Metric: "P50 (Median) Attempts", Value: { value: formatNumber(Math.round(results.starsSummary.medianAttempts)), info: "Half of runs finish at or below this." } },
-                  { Metric: "P90 Attempts", Value: { value: formatNumber(Math.round(results.starsSummary.p90Attempts)), info: "90% of runs finish at or below this." } },
-                  { Metric: "P99 Attempts", Value: { value: formatNumber(Math.round(results.starsSummary.p99Attempts)), info: "99% of runs finish at or below this." } },
+                  {
+                    Metric: "Mean Attempts",
+                    Value: { value: formatNumber(Math.round(results.starsSummary.meanAttempts)), info: "Arithmetic average across runs." },
+                  },
+                  {
+                    Metric: "P50 (Median) Attempts",
+                    Value: { value: formatNumber(Math.round(results.starsSummary.medianAttempts)), info: "Half of runs finish at or below this." },
+                  },
+                  {
+                    Metric: "P90 Attempts",
+                    Value: { value: formatNumber(Math.round(results.starsSummary.p90Attempts)), info: "90% of runs finish at or below this." },
+                  },
+                  {
+                    Metric: "P99 Attempts",
+                    Value: { value: formatNumber(Math.round(results.starsSummary.p99Attempts)), info: "99% of runs finish at or below this." },
+                  },
                   { Metric: "Mean Gold", Value: { value: formatGold(results.starsSummary.meanGold), info: "Mean attempts × gold per attempt." } },
                   { Metric: "P50 (Median) Gold", Value: { value: formatGold(results.starsSummary.medianGold), info: "Gold at median attempts." } },
                   { Metric: "P90 Gold", Value: { value: formatGold(results.starsSummary.p90Gold), info: "Gold at 90th percentile attempts." } },
@@ -722,10 +741,22 @@ export default function App() {
                 title={`Upgrade +${fromLevel} → +${toLevel} — Monte Carlo`}
                 titleInfo="Includes rebuilding stars between failed finals."
                 rows={[
-                  { Metric: "Mean Attempts", Value: { value: formatNumber(Math.round(results.fullSummary.meanAttempts)), info: "Arithmetic average across runs." } },
-                  { Metric: "P50 (Median) Attempts", Value: { value: formatNumber(Math.round(results.fullSummary.medianAttempts)), info: "Half of runs finish at or below this." } },
-                  { Metric: "P90 Attempts", Value: { value: formatNumber(Math.round(results.fullSummary.p90Attempts)), info: "90% of runs finish at or below this." } },
-                  { Metric: "P99 Attempts", Value: { value: formatNumber(Math.round(results.fullSummary.p99Attempts)), info: "99% of runs finish at or below this." } },
+                  {
+                    Metric: "Mean Attempts",
+                    Value: { value: formatNumber(Math.round(results.fullSummary.meanAttempts)), info: "Arithmetic average across runs." },
+                  },
+                  {
+                    Metric: "P50 (Median) Attempts",
+                    Value: { value: formatNumber(Math.round(results.fullSummary.medianAttempts)), info: "Half of runs finish at or below this." },
+                  },
+                  {
+                    Metric: "P90 Attempts",
+                    Value: { value: formatNumber(Math.round(results.fullSummary.p90Attempts)), info: "90% of runs finish at or below this." },
+                  },
+                  {
+                    Metric: "P99 Attempts",
+                    Value: { value: formatNumber(Math.round(results.fullSummary.p99Attempts)), info: "99% of runs finish at or below this." },
+                  },
                   { Metric: "Mean Gold", Value: { value: formatGold(results.fullSummary.meanGold), info: "Mean attempts × gold per attempt." } },
                   { Metric: "P50 (Median) Gold", Value: { value: formatGold(results.fullSummary.medianGold), info: "Gold at median attempts." } },
                   { Metric: "P90 Gold", Value: { value: formatGold(results.fullSummary.p90Gold), info: "Gold at 90th percentile attempts." } },
@@ -755,7 +786,13 @@ export default function App() {
                 titleInfo="Adversarial luck: every try fails unless guaranteed by pity."
                 rows={[
                   { Metric: "Attempts", Value: { value: fmtWorstVal(results.wcStars.attempts), info: "Infinite if star pity resets each fail." } },
-                  { Metric: "Gold", Value: { value: Number.isFinite(results.wcStars.gold) ? formatGold(results.wcStars.gold) : "Infinite", info: "Attempts × gold per attempt." } },
+                  {
+                    Metric: "Gold",
+                    Value: {
+                      value: Number.isFinite(results.wcStars.gold) ? formatGold(results.wcStars.gold) : "Infinite",
+                      info: "Attempts × gold per attempt.",
+                    },
+                  },
                 ]}
               />
 
@@ -764,7 +801,13 @@ export default function App() {
                 titleInfo="Includes repeated rebuilds and final pity that persists."
                 rows={[
                   { Metric: "Attempts", Value: { value: fmtWorstVal(results.wcFull.attempts), info: "Infinite if star pity resets each fail." } },
-                  { Metric: "Gold", Value: { value: Number.isFinite(results.wcFull.gold) ? formatGold(results.wcFull.gold) : "Infinite", info: "Attempts × gold per attempt." } },
+                  {
+                    Metric: "Gold",
+                    Value: {
+                      value: Number.isFinite(results.wcFull.gold) ? formatGold(results.wcFull.gold) : "Infinite",
+                      info: "Attempts × gold per attempt.",
+                    },
+                  },
                 ]}
               />
             </div>
@@ -772,7 +815,9 @@ export default function App() {
             {/* Charts */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="rounded-2xl shadow p-5 bg-white">
-                <h3 className="text-xl font-semibold mb-3">Attempts Distribution — Build Stars <InfoIcon text="Histogram of attempts across Monte Carlo runs." /></h3>
+                <h3 className="text-xl font-semibold mb-3">
+                  Attempts Distribution — Build Stars <InfoIcon text="Histogram of attempts across Monte Carlo runs." />
+                </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={results.starsHistogram}>
@@ -787,7 +832,9 @@ export default function App() {
               </div>
 
               <div className="rounded-2xl shadow p-5 bg-white">
-                <h3 className="text-xl font-semibold mb-3">Attempts Distribution — Final Upgrade <InfoIcon text="Histogram of attempts across Monte Carlo runs." /></h3>
+                <h3 className="text-xl font-semibold mb-3">
+                  Attempts Distribution — Final Upgrade <InfoIcon text="Histogram of attempts across Monte Carlo runs." />
+                </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={results.fullHistogram}>
@@ -808,10 +855,7 @@ export default function App() {
                 <h3 className="text-xl font-semibold">Diagnostics</h3>
                 <InfoIcon text="Quick sanity checks to verify core logic." />
               </div>
-              <button
-                onClick={runDiagnostics}
-                className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800"
-              >
+              <button onClick={runDiagnostics} className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800">
                 Run Diagnostics
               </button>
               <ul className="mt-3 space-y-2 text-sm">
@@ -820,9 +864,7 @@ export default function App() {
                     <span className="font-medium">{d.pass ? "PASS" : "FAIL"}</span> — {d.name}: {d.detail}
                   </li>
                 ))}
-                {diagnostics.length === 0 && (
-                  <li className="text-gray-600">No diagnostics run yet.</li>
-                )}
+                {diagnostics.length === 0 && <li className="text-gray-600">No diagnostics run yet.</li>}
               </ul>
             </div>
           </section>
@@ -831,8 +873,8 @@ export default function App() {
         {!results && (
           <div className="rounded-2xl shadow p-5 bg-white">
             <p className="text-gray-700">
-              Set <span className="font-semibold">From Level</span> and <span className="font-semibold">Stars required</span>,
-              then click <span className="font-semibold">Run Simulation</span> to see averages, percentiles
+              Set <span className="font-semibold">From Level</span> and <span className="font-semibold">Stars required</span>, then click{" "}
+              <span className="font-semibold">Run Simulation</span> to see averages, percentiles
               <InfoIcon text="P50 = median, P90/P99 = 90th/99th percentiles." />, per-star attempts
               <InfoIcon text="How many times each specific star is attempted in a run." />, worst-case (full pity)
               <InfoIcon text="Assumes every non-guaranteed attempt fails." /> and distribution charts.
