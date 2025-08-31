@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Info, Moon, Sun } from "lucide-react";
 
@@ -214,23 +214,48 @@ function worstCaseFull(params) {
 // ------------------------------------------------------------
 function InfoIcon({ text }) {
   const [open, setOpen] = useState(false);
+  const openTimer = useRef(null);
+  const closeTimer = useRef(null);
+
+  const clearTimers = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  };
+
+  const handleEnter = () => {
+    clearTimeout(closeTimer.current);
+    openTimer.current = setTimeout(() => setOpen(true), 120); // small open delay
+  };
+
+  const handleLeave = () => {
+    clearTimeout(openTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 160); // small close delay
+  };
+
+  useEffect(() => () => clearTimers(), []);
+
   return (
-    <span className="relative inline-flex items-center ml-1 align-middle">
+    <span className="relative inline-flex items-center ml-1 align-middle" onPointerEnter={handleEnter} onPointerLeave={handleLeave}>
       <button
         type="button"
         aria-label="Info"
         className="inline-flex items-center text-gray-400 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 focus:outline-none"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
         onClick={() => setOpen((o) => !o)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          // when keyboard-tabbing away, close after a short delay
+          closeTimer.current = setTimeout(() => setOpen(false), 160);
+        }}
       >
         <Info size={14} />
       </button>
-      {open && (
-        <span className="absolute z-20 left-1/2 -translate-x-1/2 mt-6 w-56 rounded-lg bg-black/90 text-white text-xs p-2 shadow-lg">{text}</span>
-      )}
+      <span
+        className={`pointer-events-none absolute z-20 left-1/2 -translate-x-1/2 mt-6 w-56 rounded-lg bg-black/90 text-white text-xs p-2 shadow-lg transition duration-150 ease-out ${
+          open ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
+        {text}
+      </span>
     </span>
   );
 }
