@@ -1,23 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Info } from "lucide-react";
+import { Info, Moon, Sun } from "lucide-react";
 
 // ------------------------------------------------------------
-// Universal Enhancement Simulator — Single-File React App
+// Universal Enhancement Simulator — Single‑File React App (Dark Mode)
 // ------------------------------------------------------------
-// Now supports ANY single-step upgrade +L → +(L+1) with a configurable
-// number of stars per level (e.g., 15→16 has 3 stars, 18→19 has 4,
-// 20→21 has 5). You can override the star count directly.
-//
-// Key features
-// • Choose From Level (L) ⇒ simulates +L → +(L+1)
-// • Stars required is editable (with a suggested default rule)
-// • Per-star & final success rates, pity thresholds, gold cost
-// • Monte Carlo averages/percentiles, histograms
-// • Worst-case (full pity) when star pity is allowed to accumulate
-// • Per-star attempt stats (mean / P50 / P90 / P99)
-// • Tooltips for all jargon
-// • Diagnostics tests
+// Supports ANY single‑step upgrade +L → +(L+1) with configurable stars.
+// Now includes a built‑in light/dark theme toggle (persists to localStorage)
+// and adjusts cards, inputs, tables, and charts for readability.
 // ------------------------------------------------------------
 
 // Default suggested star rule (edit as needed):
@@ -157,7 +147,7 @@ function simulateStarsOnly(params, rand) {
 }
 
 // ------------------------------------------------------------
-// Deterministic Worst-Case (Full Pity) Calculators (generalized)
+// Deterministic Worst‑Case (Full Pity) Calculators (generalized)
 // ------------------------------------------------------------
 function worstCaseStarsOnly(params) {
   const { goldPerAttempt, starPityThreshold, starPityResetsOnAnyFail, numStars } = params;
@@ -229,7 +219,7 @@ function InfoIcon({ text }) {
       <button
         type="button"
         aria-label="Info"
-        className="inline-flex items-center text-gray-400 hover:text-gray-700 focus:outline-none"
+        className="inline-flex items-center text-gray-400 hover:text-gray-700 dark:text-neutral-400 dark:hover:text-neutral-200 focus:outline-none"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
@@ -245,9 +235,9 @@ function InfoIcon({ text }) {
   );
 }
 
-function SummaryTable({ title, titleInfo, rows }) {
+function SummaryTable({ title, titleInfo, rows, dark }) {
   return (
-    <div className="rounded-2xl shadow p-5 bg-white">
+    <div className={dark ? "rounded-2xl shadow p-5 bg-neutral-800" : "rounded-2xl shadow p-5 bg-white"}>
       <h3 className="text-xl font-semibold mb-3">
         {title}
         {titleInfo && <InfoIcon text={titleInfo} />}
@@ -255,9 +245,9 @@ function SummaryTable({ title, titleInfo, rows }) {
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-left border-b">
+            <tr className={dark ? "text-left border-b border-neutral-700" : "text-left border-b"}>
               {Object.keys(rows[0] || {}).map((k) => (
-                <th key={k} className="py-2 pr-6 font-medium text-gray-600">
+                <th key={k} className={dark ? "py-2 pr-6 font-medium text-neutral-300" : "py-2 pr-6 font-medium text-gray-600"}>
                   {k}
                 </th>
               ))}
@@ -265,7 +255,7 @@ function SummaryTable({ title, titleInfo, rows }) {
           </thead>
           <tbody>
             {rows.map((r, idx) => (
-              <tr key={idx} className="border-b/50">
+              <tr key={idx} className={dark ? "border-b border-neutral-800" : "border-b/50"}>
                 {Object.entries(r).map(([k, v], i) => (
                   <td key={i} className="py-2 pr-6 whitespace-nowrap">
                     {typeof v === "object" && v !== null && "value" in v ? (
@@ -308,7 +298,24 @@ function summarizePerStar(perStarArrs) {
   return rows;
 }
 
-export default function App() {
+export default function EnhancementSimulatorApp() {
+  // Theme
+  const [dark, setDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem("enhance_sim_dark");
+      if (saved !== null) return saved === "1";
+    } catch {}
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("enhance_sim_dark", dark ? "1" : "0");
+    } catch {}
+  }, [dark]);
+
   // Inputs
   const [fromLevel, setFromLevel] = useState(18);
   const [starsRequired, setStarsRequired] = useState(suggestedStarsForLevel(18));
@@ -439,106 +446,84 @@ export default function App() {
     setFinalProb(r);
   };
 
-  // ------------------------------------------------------------
-  // Diagnostics
-  // ------------------------------------------------------------
-  const runDiagnostics = () => {
-    const out = [];
-
-    const gold = 100;
-
-    // Test 1: p=1 everywhere
-    {
-      const params = {
-        goldPerAttempt: gold,
-        starProbs: [1, 1, 1],
-        finalProb: 1,
-        starPityThreshold: 6,
-        finalPityThreshold: 6,
-        starPityResetsOnAnyFail: false,
-        numStars: 3,
-      };
-      const rng = createLCG(1);
-      const s = simulateStarsOnly(params, rng);
-      const f = simulateFullRun(params, rng);
-      const perStarOk = JSON.stringify(s.starAttempts) === JSON.stringify([1, 1, 1]) && JSON.stringify(f.starAttempts) === JSON.stringify([1, 1, 1]);
-      out.push({
-        name: "p=1 deterministic (3 stars)",
-        pass: s.attempts === 3 && f.attempts === 4 && perStarOk,
-        detail: `stars=${s.attempts} (exp 3), full=${f.attempts} (exp 4), perStarOK=${perStarOk}`,
-      });
-    }
-
-    // Test 2: p=0 equals worst-case (2 stars, pity=2)
-    {
-      const params = {
-        goldPerAttempt: gold,
-        starProbs: [0, 0],
-        finalProb: 0,
-        starPityThreshold: 2,
-        finalPityThreshold: 2,
-        starPityResetsOnAnyFail: false,
-        numStars: 2,
-      };
-      const rng = createLCG(42);
-      const f = simulateFullRun(params, rng);
-      const wc = worstCaseFull(params);
-      out.push({
-        name: "p=0 equals worst-case (2 stars)",
-        pass: f.attempts === wc.attempts,
-        detail: `full=${f.attempts}, worst=${wc.attempts}`,
-      });
-    }
-
-    setDiagnostics(out);
-  };
-
-  const presetButtons = [0.2, 0.24, 0.27];
   const toLevel = Number(fromLevel) + 1;
 
+  // Styles depending on theme
+  const cls = {
+    page: dark ? "min-h-screen bg-neutral-900 text-neutral-100" : "min-h-screen bg-gray-50 text-gray-900",
+    card: dark ? "rounded-2xl shadow p-5 bg-neutral-800" : "rounded-2xl shadow p-5 bg-white",
+    subtext: dark ? "text-neutral-300" : "text-gray-600",
+    muted: dark ? "text-neutral-400" : "text-gray-600",
+    tableHead: dark ? "py-2 pr-6 font-medium text-neutral-300" : "py-2 pr-6 font-medium text-gray-600",
+    input: dark
+      ? "mt-1 rounded-xl border border-neutral-700 bg-neutral-900 text-neutral-100 px-3 py-2 focus:outline-none focus:ring w-full"
+      : "mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full",
+    btnPrimary: dark
+      ? "px-5 py-3 rounded-2xl bg-indigo-500 text-white font-medium hover:bg-indigo-400 w-full md:w-auto"
+      : "px-5 py-3 rounded-2xl bg-indigo-600 text-white font-medium hover:bg-indigo-500 w-full md:w-auto",
+    btnSecondary: dark
+      ? "px-5 py-3 rounded-2xl bg-neutral-700 hover:bg-neutral-600 font-medium w-full md:w-auto"
+      : "px-5 py-3 rounded-2xl bg-gray-200 hover:bg-gray-300 font-medium w-full md:w-auto",
+    headerPreset: dark
+      ? "px-3 py-2 rounded-xl bg-neutral-200 text-neutral-900 text-sm hover:bg-white"
+      : "px-3 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800",
+    borderRow: dark ? "border-b border-neutral-700" : "border-b",
+    chartGrid: dark ? "#444" : "#e5e7eb", // grid lines
+    chartAxis: dark ? "#d1d5db" : "#374151", // tick text
+    chartAxisStroke: dark ? "#525252" : "#e5e7eb", // axis stroke
+    barFill: dark ? "#60a5fa" : undefined, // optional override in dark
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className={cls.page}>
       <div className="max-w-6xl mx-auto p-6 md:p-10 space-y-8">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Universal Enhancement Simulator</h1>
-            <p className="text-gray-600 mt-1">
+            <p className={"mt-1 " + cls.subtext}>
               Simulate building stars and upgrading from +{fromLevel} to +{toLevel} with pity.
             </p>
           </div>
-          <div className="flex gap-2">
-            {presetButtons.map((r) => (
+          <div className="flex items-center gap-2">
+            {[0.2, 0.24, 0.27].map((r) => (
               <button
                 key={r}
                 onClick={() => quickSetRate(r)}
-                className="px-3 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800"
+                className={cls.headerPreset}
                 title={`Set all success rates to ${(r * 100).toFixed(0)}%`}
               >
                 {(r * 100).toFixed(0)}%
               </button>
             ))}
+            <button
+              aria-label="Toggle dark mode"
+              onClick={() => setDark((d) => !d)}
+              className={
+                dark
+                  ? "ml-2 p-2 rounded-xl bg-neutral-800 border border-neutral-700 hover:bg-neutral-700"
+                  : "ml-2 p-2 rounded-xl bg-white border hover:bg-gray-100"
+              }
+              title={dark ? "Switch to light" : "Switch to dark"}
+            >
+              {dark ? <Sun size={18} className="text-yellow-300" /> : <Moon size={18} className="text-gray-700" />}
+            </button>
           </div>
         </header>
 
         {/* Controls */}
         <section className="grid md:grid-cols-2 gap-6">
-          <div className="rounded-2xl shadow p-5 bg-white space-y-4">
+          <div className={cls.card + " space-y-4"}>
             <h2 className="text-lg font-semibold">Upgrade Settings</h2>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col">
-                <label className="text-xs text-gray-600">From Level (L)</label>
-                <input
-                  type="number"
-                  value={fromLevel}
-                  onChange={(e) => setFromLevel(Number(e.target.value))}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
-                />
-                <div className="text-xs text-gray-500 mt-1">
+                <label className={"text-xs " + cls.muted}>From Level (L)</label>
+                <input type="number" value={fromLevel} onChange={(e) => setFromLevel(Number(e.target.value))} className={cls.input} />
+                <div className={"text-xs mt-1 " + cls.muted}>
                   Simulates +{fromLevel} → +{toLevel}
                 </div>
               </div>
               <div className="flex flex-col">
-                <label className="text-xs text-gray-600">Stars required</label>
+                <label className={"text-xs " + cls.muted}>Stars required</label>
                 <input
                   type="number"
                   min={1}
@@ -549,9 +534,9 @@ export default function App() {
                     setStarsRequired(n);
                     resizeStarProbs(n);
                   }}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                  className={cls.input}
                 />
-                <div className="text-xs text-gray-500 mt-1">
+                <div className={"text-xs mt-1 " + cls.muted}>
                   Suggested: {suggestedStarsForLevel(Number(fromLevel))}{" "}
                   <button onClick={applySuggestedStars} className="underline hover:no-underline">
                     apply
@@ -561,12 +546,12 @@ export default function App() {
             </div>
 
             <h2 className="text-lg font-semibold mt-4">
-              Success Rates <InfoIcon text="Per-star success rates and the final upgrade success rate." />
+              Success Rates <InfoIcon text="Per‑star success rates and the final upgrade success rate." />
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Array.from({ length: Number(starsRequired) }).map((_, i) => (
                 <div key={i} className="flex flex-col">
-                  <label className="text-xs text-gray-600">Star {i + 1} rate</label>
+                  <label className={"text-xs " + cls.muted}>Star {i + 1} rate</label>
                   <input
                     type="number"
                     step="0.001"
@@ -578,12 +563,12 @@ export default function App() {
                       copy[i] = Number(e.target.value);
                       setStarProbs(copy);
                     }}
-                    className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                    className={cls.input}
                   />
                 </div>
               ))}
               <div className="flex flex-col md:col-span-2">
-                <label className="text-xs text-gray-600">
+                <label className={"text-xs " + cls.muted}>
                   Final upgrade rate (+{fromLevel} → +{toLevel})
                 </label>
                 <input
@@ -593,45 +578,45 @@ export default function App() {
                   max="1"
                   value={finalProb}
                   onChange={(e) => setFinalProb(Number(e.target.value))}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                  className={cls.input}
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl shadow p-5 bg-white space-y-4">
+          <div className={cls.card + " space-y-4"}>
             <h2 className="text-lg font-semibold">
               Economy & Pity <InfoIcon text="Gold per attempt and pity thresholds. After N fails, the next attempt is guaranteed." />
             </h2>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col">
-                <label className="text-xs text-gray-600">Gold per attempt</label>
+                <label className={"text-xs " + cls.muted}>Gold per attempt</label>
                 <input
                   type="number"
                   min={0}
                   value={goldPerAttempt}
                   onChange={(e) => setGoldPerAttempt(Number(e.target.value))}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                  className={cls.input}
                 />
               </div>
               <div className="flex flex-col">
-                <label className="text-xs text-gray-600">Star pity threshold (fails)</label>
+                <label className={"text-xs " + cls.muted}>Star pity threshold (fails)</label>
                 <input
                   type="number"
                   min={0}
                   value={starPityThreshold}
                   onChange={(e) => setStarPityThreshold(Number(e.target.value))}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                  className={cls.input}
                 />
               </div>
               <div className="flex flex-col">
-                <label className="text-xs text-gray-600">Final pity threshold (fails)</label>
+                <label className={"text-xs " + cls.muted}>Final pity threshold (fails)</label>
                 <input
                   type="number"
                   min={0}
                   value={finalPityThreshold}
                   onChange={(e) => setFinalPityThreshold(Number(e.target.value))}
-                  className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
+                  className={cls.input}
                 />
               </div>
               <div className="flex items-end gap-2">
@@ -644,43 +629,28 @@ export default function App() {
                 />
                 <label htmlFor="resetPity" className="text-sm">
                   Reset <span className="font-semibold">all star pity counters</span> on any fail
-                  <InfoIcon text="If enabled, star pity cannot accumulate; worst-case becomes infinite." />
+                  <InfoIcon text="If enabled, star pity cannot accumulate; worst‑case becomes infinite." />
                 </label>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl shadow p-5 bg-white grid md:grid-cols-3 gap-4 items-end">
+        <section className={cls.card + " grid md:grid-cols-3 gap-4 items-end"}>
           <div className="flex flex-col">
-            <label className="text-xs text-gray-600">
+            <label className={"text-xs " + cls.muted}>
               Monte Carlo trials <InfoIcon text="We sample many random runs to estimate averages and percentiles." />
             </label>
-            <input
-              type="number"
-              min={100}
-              max={200000}
-              value={trials}
-              onChange={(e) => setTrials(Number(e.target.value))}
-              className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
-            />
+            <input type="number" min={100} max={200000} value={trials} onChange={(e) => setTrials(Number(e.target.value))} className={cls.input} />
           </div>
           <div className="flex flex-col">
-            <label className="text-xs text-gray-600">
-              Random seed <InfoIcon text="Same seed → same pseudo-random sequence → reproducible results." />
+            <label className={"text-xs " + cls.muted}>
+              Random seed <InfoIcon text="Same seed → same pseudo‑random sequence → reproducible results." />
             </label>
-            <input
-              type="number"
-              value={seed}
-              onChange={(e) => setSeed(Number(e.target.value))}
-              className="mt-1 rounded-xl border px-3 py-2 focus:outline-none focus:ring w-full"
-            />
+            <input type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value))} className={cls.input} />
           </div>
           <div className="flex gap-3 md:justify-end">
-            <button
-              onClick={runSimulation}
-              className="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-medium hover:bg-indigo-500 w-full md:w-auto"
-            >
+            <button onClick={runSimulation} className={cls.btnPrimary}>
               Run Simulation
             </button>
             <button
@@ -699,7 +669,7 @@ export default function App() {
                 setSeed(12345);
                 setResults(null);
               }}
-              className="px-5 py-3 rounded-2xl bg-gray-200 hover:bg-gray-300 font-medium w-full md:w-auto"
+              className={cls.btnSecondary}
             >
               Reset
             </button>
@@ -711,6 +681,7 @@ export default function App() {
             {/* Summaries */}
             <div className="grid md:grid-cols-2 gap-6">
               <SummaryTable
+                dark={dark}
                 title={`Build ${results.params.numStars} Stars — Monte Carlo`}
                 titleInfo="Averages and percentiles from simulation."
                 rows={[
@@ -738,6 +709,7 @@ export default function App() {
               />
 
               <SummaryTable
+                dark={dark}
                 title={`Upgrade +${fromLevel} → +${toLevel} — Monte Carlo`}
                 titleInfo="Includes rebuilding stars between failed finals."
                 rows={[
@@ -765,23 +737,26 @@ export default function App() {
               />
             </div>
 
-            {/* Per-star attempts */}
+            {/* Per‑star attempts */}
             <div className="grid md:grid-cols-2 gap-6">
               <SummaryTable
-                title="Per-Star Attempts — Build Phase"
+                dark={dark}
+                title="Per‑Star Attempts — Build Phase"
                 titleInfo="Number of times each specific star was attempted until all stars were built. Earlier stars tend to be tried more due to resets."
                 rows={results.starsPerStarRows}
               />
               <SummaryTable
-                title="Per-Star Attempts — Full Upgrade"
+                dark={dark}
+                title="Per‑Star Attempts — Full Upgrade"
                 titleInfo="Across the entire run to the final upgrade (including rebuilds between failed finals)."
                 rows={results.fullPerStarRows}
               />
             </div>
 
-            {/* Worst-case */}
+            {/* Worst‑case */}
             <div className="grid md:grid-cols-2 gap-6">
               <SummaryTable
+                dark={dark}
                 title={`Build ${results.params.numStars} Stars — Worst Case (Full Pity)`}
                 titleInfo="Adversarial luck: every try fails unless guaranteed by pity."
                 rows={[
@@ -797,6 +772,7 @@ export default function App() {
               />
 
               <SummaryTable
+                dark={dark}
                 title={`Upgrade +${fromLevel} → +${toLevel} — Worst Case (Full Pity)`}
                 titleInfo="Includes repeated rebuilds and final pity that persists."
                 rows={[
@@ -814,35 +790,35 @@ export default function App() {
 
             {/* Charts */}
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="rounded-2xl shadow p-5 bg-white">
+              <div className={cls.card}>
                 <h3 className="text-xl font-semibold mb-3">
                   Attempts Distribution — Build Stars <InfoIcon text="Histogram of attempts across Monte Carlo runs." />
                 </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={results.starsHistogram}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="attempts" tickFormatter={(v) => `${v}`} />
-                      <YAxis />
+                      <CartesianGrid stroke={cls.chartGrid} strokeDasharray="3 3" />
+                      <XAxis dataKey="attempts" tick={{ fill: cls.chartAxis }} stroke={cls.chartAxisStroke} />
+                      <YAxis tick={{ fill: cls.chartAxis }} stroke={cls.chartAxisStroke} />
                       <Tooltip formatter={(value) => [value, "runs"]} labelFormatter={(l) => `Attempts ≥ ${l}`} />
-                      <Bar dataKey="runs" />
+                      <Bar dataKey="runs" fill={cls.barFill} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="rounded-2xl shadow p-5 bg-white">
+              <div className={cls.card}>
                 <h3 className="text-xl font-semibold mb-3">
                   Attempts Distribution — Final Upgrade <InfoIcon text="Histogram of attempts across Monte Carlo runs." />
                 </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={results.fullHistogram}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="attempts" tickFormatter={(v) => `${v}`} />
-                      <YAxis />
+                      <CartesianGrid stroke={cls.chartGrid} strokeDasharray="3 3" />
+                      <XAxis dataKey="attempts" tick={{ fill: cls.chartAxis }} stroke={cls.chartAxisStroke} />
+                      <YAxis tick={{ fill: cls.chartAxis }} stroke={cls.chartAxisStroke} />
                       <Tooltip formatter={(value) => [value, "runs"]} labelFormatter={(l) => `Attempts ≥ ${l}`} />
-                      <Bar dataKey="runs" />
+                      <Bar dataKey="runs" fill={cls.barFill} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -850,40 +826,97 @@ export default function App() {
             </div>
 
             {/* Diagnostics */}
-            <div className="rounded-2xl shadow p-5 bg-white">
+            <div className={cls.card}>
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-xl font-semibold">Diagnostics</h3>
                 <InfoIcon text="Quick sanity checks to verify core logic." />
               </div>
-              <button onClick={runDiagnostics} className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800">
+              <button
+                onClick={() => {
+                  const out = [];
+
+                  const gold = 100;
+
+                  // Test 1: p=1 everywhere
+                  {
+                    const params = {
+                      goldPerAttempt: gold,
+                      starProbs: [1, 1, 1],
+                      finalProb: 1,
+                      starPityThreshold: 6,
+                      finalPityThreshold: 6,
+                      starPityResetsOnAnyFail: false,
+                      numStars: 3,
+                    };
+                    const rng = createLCG(1);
+                    const s = simulateStarsOnly(params, rng);
+                    const f = simulateFullRun(params, rng);
+                    const perStarOk =
+                      JSON.stringify(s.starAttempts) === JSON.stringify([1, 1, 1]) && JSON.stringify(f.starAttempts) === JSON.stringify([1, 1, 1]);
+                    out.push({
+                      name: "p=1 deterministic (3 stars)",
+                      pass: s.attempts === 3 && f.attempts === 4 && perStarOk,
+                      detail: `stars=${s.attempts} (exp 3), full=${f.attempts} (exp 4), perStarOK=${perStarOk}`,
+                    });
+                  }
+
+                  // Test 2: p=0 equals worst‑case (2 stars, pity=2)
+                  {
+                    const params = {
+                      goldPerAttempt: gold,
+                      starProbs: [0, 0],
+                      finalProb: 0,
+                      starPityThreshold: 2,
+                      finalPityThreshold: 2,
+                      starPityResetsOnAnyFail: false,
+                      numStars: 2,
+                    };
+                    const rng = createLCG(42);
+                    const f = simulateFullRun(params, rng);
+                    const wc = worstCaseFull(params);
+                    out.push({
+                      name: "p=0 equals worst‑case (2 stars)",
+                      pass: f.attempts === wc.attempts,
+                      detail: `full=${f.attempts}, worst=${wc.attempts}`,
+                    });
+                  }
+
+                  setDiagnostics(out);
+                }}
+                className={
+                  dark
+                    ? "px-4 py-2 rounded-xl bg-neutral-200 text-neutral-900 text-sm hover:bg-white"
+                    : "px-4 py-2 rounded-xl bg-gray-900 text-white text-sm hover:bg-gray-800"
+                }
+              >
                 Run Diagnostics
               </button>
               <ul className="mt-3 space-y-2 text-sm">
                 {diagnostics.map((d, i) => (
-                  <li key={i} className={d.pass ? "text-green-700" : "text-red-700"}>
+                  <li key={i} className={d.pass ? "text-green-600" : "text-red-600"}>
                     <span className="font-medium">{d.pass ? "PASS" : "FAIL"}</span> — {d.name}: {d.detail}
                   </li>
                 ))}
-                {diagnostics.length === 0 && <li className="text-gray-600">No diagnostics run yet.</li>}
+                {diagnostics.length === 0 && <li className={cls.muted}>No diagnostics run yet.</li>}
               </ul>
             </div>
           </section>
         )}
 
         {!results && (
-          <div className="rounded-2xl shadow p-5 bg-white">
-            <p className="text-gray-700">
+          <div className={cls.card}>
+            <p className={dark ? "text-neutral-200" : "text-gray-700"}>
               Set <span className="font-semibold">From Level</span> and <span className="font-semibold">Stars required</span>, then click{" "}
               <span className="font-semibold">Run Simulation</span> to see averages, percentiles
-              <InfoIcon text="P50 = median, P90/P99 = 90th/99th percentiles." />, per-star attempts
-              <InfoIcon text="How many times each specific star is attempted in a run." />, worst-case (full pity)
-              <InfoIcon text="Assumes every non-guaranteed attempt fails." /> and distribution charts.
+              <InfoIcon text="P50 = median, P90/P99 = 90th/99th percentiles." />, per‑star attempts
+              <InfoIcon text="How many times each specific star is attempted in a run." />, worst‑case (full pity)
+              <InfoIcon text="Assumes every non‑guaranteed attempt fails." /> and distribution charts.
             </p>
           </div>
         )}
 
-        <footer className="text-xs text-gray-500 pb-6">
-          Built as a single-file React app. Styling via Tailwind; charts via Recharts; icons via lucide-react.
+        <footer className={"text-xs pb-6 " + cls.muted}>
+          Built as a single‑file React app. Styling via Tailwind; charts via Recharts; icons via lucide‑react.
         </footer>
       </div>
     </div>
