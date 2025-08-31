@@ -345,7 +345,7 @@ export default function EnhancementSimulatorApp() {
   const [fromLevel, setFromLevel] = useState(18);
   const [starsRequired, setStarsRequired] = useState(suggestedStarsForLevel(18));
 
-  const [goldPerAttempt, setGoldPerAttempt] = useState(170000);
+  const [goldPerAttempt, setGoldPerAttempt] = useState(270000);
   const [starProbs, setStarProbs] = useState(Array(starsRequired).fill(0.2));
   const [finalProb, setFinalProb] = useState(0.2);
   const [starPityThreshold, setStarPityThreshold] = useState(6);
@@ -684,7 +684,7 @@ export default function EnhancementSimulatorApp() {
                 const sug = suggestedStarsForLevel(18);
                 setStarsRequired(sug);
                 resizeStarProbs(sug);
-                setGoldPerAttempt(170000);
+                setGoldPerAttempt(270000);
                 setStarProbs(Array(sug).fill(0.2));
                 setFinalProb(0.2);
                 setStarPityThreshold(6);
